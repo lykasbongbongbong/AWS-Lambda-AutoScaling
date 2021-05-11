@@ -3,7 +3,6 @@ import json
 import time
 import sys
 import getopt
-import argparse
 import os
 import logging
 import uuid
@@ -19,9 +18,11 @@ import botocore
 # Connect to SQS and poll for messages
 ##########################################################
 def lambda_handler(event, context):
-    AWS_ACCESS_KEY_ID = 'ASIAROHPZOUOVMMCO7W5'
-    AWS_SECRET_ACCESS_KEY = 'M6MbYKt5XiTvEQRvEPoKCqTPIWfyFzL74xCAeX1V'
-    AWS_SESSION_TOKEN = 'IQoJb3JpZ2luX2VjEB4aCXVzLXdlc3QtMiJHMEUCICV3uCrdsenP3roVBdx3T5qdPVxHoEYDeqfX3jjxKW5KAiEAyP+ccbv8hFzXVbEs5GmRA+iz+uNfeVFLBAPM3/pH1jAqvQIIp///////////ARAAGgwwOTkyODcxMzU1MTciDDyKpw7lwYDco3VwwSqRAkhEKuLEPomZM7AofDEZrWWCpPVPspL6RAnvW3M0P5tD6OtjD1vtKF2u8D7+CtuUzrOsqn6fraXM7njcOESu72+8zmHYiH+ao54IU0NmynEVnATXxORJNbMHc/jlgU0/1pLIJvmhrJPK75S+a1dK6Npk8llvLOU5UuDpZeID/Cu2pezzSQVRspPtjMxljjGJxJJt/kJsThj6nXchFqM2R/11n0MB2clypz2cqzHcMjUwcTsDmG3gneBrmPkk8b8xriz9tGhADcP7kDC47mYaoi7Undi19bDaAJSGYr22nRyIciexvW8cIjc6zTalt459QSKiz4kpa6vE/pNk+NTMFguijC0tia+gp+fcet/oIJ2IdTCOlOqEBjqdAdE+0K0FE4NELphpPCBN4v7jB4/leL116FntcsniiiIZ43yqdFIUEKcf5S9liteMKrK01XvCwPsyotIFruya02PSPzNW12Y+aSmFJv5ms63vh7PkFoGL2xJg2GKuBZCOftOxS1GFDeHM/4VTwujOzw4Z+wGVtSIy5iaIhervRdPUL+qwqmD+6AmufRWGGjOVU1wzsvY+bVViPhRRSm0='
+
+    #init
+    AWS_ACCESS_KEY_ID = 'ASIAROHPZOUO4PXVRCO5'
+    AWS_SECRET_ACCESS_KEY = '0FljjQZA0QdMPkPeeJ/mpkVga+sOf9UfOKBiILed'
+    AWS_SESSION_TOKEN = 'IQoJb3JpZ2luX2VjECAaCXVzLXdlc3QtMiJGMEQCIAE+PyMDom22GzDVrCZdRMId+JzGMRuZu+0Jl2zkDFiaAiBhkCzz2+xHu9dvu4yq+ElD7yYHu8IEnDVH1vgOPyVC1Sq9Agip//////////8BEAAaDDA5OTI4NzEzNTUxNyIM4SLn0jP15lOUyHHcKpECVcTrb0llyHGxKTV/t2kaTk+F34EXWvtoUzCo+H++Gm6tiFAmbduqDTzDAUXUVU69a+A8cglUfQK4aXOsVc4UWqycV2N2xKsDeF4ZnS6k/5itd2D3qbgNxE3E8vbGVy/LoSzwiNt5oz67TfN6zJWfA4Cqxvx6aqWKzMNAjzcNSx2ZxJQJ/KakN1pCCjaIX0AVXC0FAUEk34DIx9ARUFIkMKvYb+MWsaIExSP8X+sNOmwc4nQ8jKX9oSSz3LWVOsCXEXzizK+VqDs+MClRFyOQJawsk4iEitfEmapDsxVmnP6twCVsV0VYaWn7pm4X8V6cnavd+uZCRseq7r5p7LvYSGr93Bx2FMFz0o0MM4m1+64NMInE6oQGOp4BkUsCw3/FaW6fJIOqXT8XGbQiwH/Ae3ii7QxXzzbFz8d8boSS9O46x6vvG7i347PBL5n6FoHROq0YpcfZeduz5WX34JPE8p2c01DgRvXD9z3ASDz708UfH4vLktO2M5ted/gHHHo6uYEN1mL7AHdgo4prnXSjQEnxkPd0kMtjt4vreFCVgySrTe4+k+e61CcDXS62v6JAVFrir0uxxyM='
     print(f"input queue name: {event['input_queue']}")
     print(f"output queue name: {event['output_queue']}")
     print(f"s3 output bucket name: {event['s3_output_bucket']}")
@@ -32,12 +33,12 @@ def lambda_handler(event, context):
     output_queue_name = event['output_queue']
     s3_output_bucket_name = event['s3_output_bucket']
 
-    
-
     sqs_client = boto3.client('sqs', region_name=region_name, aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN)
+    sqs = boto3.resource('sqs')
+
+
 
     print('Retrieving jobs from queue %s. Processed images will be stored in %s and a message placed in queue %s' % (input_queue_name, s3_output_bucket_name, output_queue_name))
-
     
     #connect to sqs and open queue
     input_queue_url_response = sqs_client.get_queue_url(QueueName=input_queue_name)
@@ -45,23 +46,38 @@ def lambda_handler(event, context):
     input_queue_url = input_queue_url_response["QueueUrl"]
     output_queue_url = output_queue_url_response["QueueUrl"]
 
-    print(output_queue_url)
+    print("Input queue url: " + input_queue_url)
+    print("Output queue url: "+ output_queue_url)
     
     
     while True:
         # Get the queue
-        sqs = boto3.resource('sqs')
         queue = sqs.get_queue_by_name(QueueName=input_queue_name)
-        for message in queue.receive_messages():
-            message = message.body 
+        for msg in queue.receive_messages():
+            print("This is full message")
+            print(msg)
+            message = msg.body 
+            
             print(message)
+            receipt_handle = msg.receipt_handle
+            print()
+            print("Receipt Handle")
+            print(receipt_handle)
+
             job_id = str(uuid.uuid4())
             # output_url = process_message(message, s3_output_bucket_name, job_id)  
             # print(output_url)   
             output_url = "https://google.com.tw/"       
             output_message = "Output available at: %s" % (output_url) 
-            response = write_output_message(sqs_client, output_message, output_queue_url)
 
+            #write message to output queue
+            write_output_message(sqs_client, output_message, output_queue_url)
+
+            print(output_message)
+            print("Image processing completed")
+
+            # Delete message from the queue           
+            sqs_client.delete_message(QueueUrl=input_queue_url, ReceiptHandle=receipt_handle)
 
 # # process a newline-delimited list of URLs
 def process_message(message, s3_output_bucket_name, job_id):
@@ -116,5 +132,5 @@ def write_output_message(sqs_client, message, output_queue_url):
         MessageBody=message,
         DelaySeconds=1,
     )
-    return response 
+    
 	
