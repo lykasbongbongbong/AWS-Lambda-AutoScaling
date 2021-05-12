@@ -8,6 +8,10 @@ import logging
 import uuid
 import math
 import boto3
+# from urllib.request import Request, urlopen
+
+import urllib.request
+
 # import httplib
 # from boto.sqs.message import RawMessage
 # from boto.sqs.message import Message
@@ -23,10 +27,10 @@ def lambda_handler(event, context):
     AWS_ACCESS_KEY_ID = 'ASIAROHPZOUO4PXVRCO5'
     AWS_SECRET_ACCESS_KEY = '0FljjQZA0QdMPkPeeJ/mpkVga+sOf9UfOKBiILed'
     AWS_SESSION_TOKEN = 'IQoJb3JpZ2luX2VjECAaCXVzLXdlc3QtMiJGMEQCIAE+PyMDom22GzDVrCZdRMId+JzGMRuZu+0Jl2zkDFiaAiBhkCzz2+xHu9dvu4yq+ElD7yYHu8IEnDVH1vgOPyVC1Sq9Agip//////////8BEAAaDDA5OTI4NzEzNTUxNyIM4SLn0jP15lOUyHHcKpECVcTrb0llyHGxKTV/t2kaTk+F34EXWvtoUzCo+H++Gm6tiFAmbduqDTzDAUXUVU69a+A8cglUfQK4aXOsVc4UWqycV2N2xKsDeF4ZnS6k/5itd2D3qbgNxE3E8vbGVy/LoSzwiNt5oz67TfN6zJWfA4Cqxvx6aqWKzMNAjzcNSx2ZxJQJ/KakN1pCCjaIX0AVXC0FAUEk34DIx9ARUFIkMKvYb+MWsaIExSP8X+sNOmwc4nQ8jKX9oSSz3LWVOsCXEXzizK+VqDs+MClRFyOQJawsk4iEitfEmapDsxVmnP6twCVsV0VYaWn7pm4X8V6cnavd+uZCRseq7r5p7LvYSGr93Bx2FMFz0o0MM4m1+64NMInE6oQGOp4BkUsCw3/FaW6fJIOqXT8XGbQiwH/Ae3ii7QxXzzbFz8d8boSS9O46x6vvG7i347PBL5n6FoHROq0YpcfZeduz5WX34JPE8p2c01DgRvXD9z3ASDz708UfH4vLktO2M5ted/gHHHo6uYEN1mL7AHdgo4prnXSjQEnxkPd0kMtjt4vreFCVgySrTe4+k+e61CcDXS62v6JAVFrir0uxxyM='
-    print(f"input queue name: {event['input_queue']}")
-    print(f"output queue name: {event['output_queue']}")
-    print(f"s3 output bucket name: {event['s3_output_bucket']}")
-    print(f"region name: {event['region']}")
+    # print(f"input queue name: {event['input_queue']}")
+    # print(f"output queue name: {event['output_queue']}")
+    # print(f"s3 output bucket name: {event['s3_output_bucket']}")
+    # print(f"region name: {event['region']}")
 
     # Get region
     region_name = event['region']
@@ -42,7 +46,8 @@ def lambda_handler(event, context):
     input_queue_name = event['input_queue']
     output_queue_name = event['output_queue']
 
-    sqs_client = boto3.client('sqs', region_name=region_name, aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN)
+    # sqs_client = boto3.client('sqs', region_name=region_name, aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, aws_session_token=AWS_SESSION_TOKEN)
+    sqs_client = boto3.client('sqs')
     sqs = boto3.resource('sqs')
     s3_client = boto3.client('s3')
 
@@ -78,9 +83,9 @@ def lambda_handler(event, context):
             print("Message received...")
             # print(msg)
             message = msg.body 
-            print()
-            print(message)
-            print()
+            # print()
+            # print(message)
+            # print()
             receipt_handle = msg.receipt_handle
             # print()
             # print("Receipt Handle")
@@ -95,46 +100,90 @@ def lambda_handler(event, context):
             # # output_url = "https://google.com.tw/"
             print(output_url)  
 
-            # # time.sleep(15) 
-            # output_message = "Output available at: %s" % (output_url) 
+           
 
-            # #write message to output queue
-            # write_output_message(sqs_client, output_message, output_queue_url)
+            # time.sleep(15) 
+            output_message = "Output available at: %s" % (output_url) 
 
-            # print(output_message)
-            # print("Image processing completed")
+            #write message to output queue
+            write_output_message(sqs_client, output_message, output_queue_url)
 
-            # # Delete message from the queue           
-            # sqs_client.delete_message(QueueUrl=input_queue_url, ReceiptHandle=receipt_handle)
+            print(output_message)
+            print("Image processing completed")
+
+            # Delete message from the queue           
+            sqs_client.delete_message(QueueUrl=input_queue_url, ReceiptHandle=receipt_handle)
+        
+            break
+        break
 
 ##############################################################################
 # Process a newline-delimited list of URls
 ##############################################################################
 def process_message(message, s3_output_bucket_name, job_id):
-    output_dir = "/home/ec2-user/jobs/%s/" % (job_id)
-    output_image_name = "output-%s.jpg" % (job_id)
+    # output_dir = "/home/ec2-user/jobs/%s/" % (job_id)
+    output_dir = "/tmp/" + job_id
+    output_image_name = "output-%s.png" % (job_id)
+    # output_image_path = output_dir + output_image_name 
+    output_image_path = "/tmp/" + job_id + "/" + output_image_name
     
-    mkdir_cmd = "mkdir " + output_dir
-    os.system(mkdir_cmd)
-    print(mkdir_cmd)
-    touch_file = "touch " + output_dir+output_image_name
-    os.system(touch_file) 
+    # print("Downloading image from" + message)
 
-    print("Downloading image from" + message)
-    download_cmd = "wget -O " + output_dir+output_image_name + " " + message
-    print(download_cmd)
-    os.system(download_cmd)
-    output_image_name = "output-%s.jpg" % (job_id)
-    output_image_path = output_dir + output_image_name 
    
-    # Invoke ImageMagick to create a montage
-    print("Doing montage")
-    montage_cmd = "montage -size 400x400 null: %s*.* null: -thumbnail 400x400 -bordercolor white -background black +polaroid -resize 80%% -gravity center -background black -geometry -10+2  -tile x1 %s" % (output_dir, output_image_path)
+    #cd to /tmp
+    # cd_cmd = "cd /tmp"
+    # print(cd_cmd)
+    # os.system(cd_cmd)
+    os.chdir("/tmp")
+
+    #create job_id folder
+    mkdir_cmd = "mkdir /tmp/"+job_id
+    print("Make a dir at: " + mkdir_cmd)
+    os.system(mkdir_cmd)
+
+    # cd to job_id folder
+    job_id_folder = "/tmp/"+job_id
+    os.chdir(job_id_folder)
+    # cd_to_job_id_folder_cmd = "cd /tmp/"+job_id
+    print("Change Folder to " + job_id_folder)
+    # os.system(cd_to_job_id_folder_cmd)
+
+    #download images
+    # download_cmd = "wget -O "+message
+    # print(download_cmd)
+    # os.system(download_cmd)
+    # Download images from URLs specified in message
+
+    # urllib.request.urlretrieve("http://www.digimouth.com/news/media/2011/09/google-logo.jpg", "local-filename.jpg")
+    for line in message.splitlines():
+        img_name = line.split('/')[-1]
+        # print("Downloading image from %s" % line)
+        # image = urllib.urlopen()
+        urllib.request.urlretrieve(line, img_name)
+        # # download_cmd = "wget -P %s %s" % (output_dir, line)
+        # req = Request(line, headers={'User-Agent': 'Mozilla/5.0'})
+        # image = urlopen(req).read()        
+        # download_cmd = "wget %s" % (line)
+        # # download_cmd = "curl "+line+" > "+img_name
+        # os.system(download_cmd)
+        # print(download_cmd)
+
+    # # Invoke ImageMagick to create a montage
+    print("-----Doing montage-----")
+    cd_to_tmp = "cd /tmp"
+    print(cd_to_tmp)
+    os.system(cd_to_tmp)
+    tmp_img_path = output_dir + "/" + "20120728-DSC01292-L.jpg"
+    montage_cmd = "montage -size 400x400 null: " + output_dir + "/* null: -thumbnail 400x400 -bordercolor white -background black +polaroid -resize 80% -gravity center -background black -geometry -10+2  -tile x1 " + output_image_path
+
     print(montage_cmd)
-    os.system("montage -size 400x400 null: %s*.* null: -thumbnail 400x400 -bordercolor white -background black +polaroid -resize 80%% -gravity center -background black -geometry -10+2  -tile x1 %s" % (output_dir, output_image_path))
-	
+    os.system(montage_cmd)
     #write the resuling image to s3
-    print("Start write to s3")
+    print("-----Start write to s3-----")
+
+    # output_image_name = "20120728-DSC01292-L.jpg"
+    output_image_path = "/tmp/"+job_id+"/"+output_image_name
+    
     output_url = write_image_to_s3(output_image_path, s3_output_bucket_name, output_image_name)
     print(output_url)
     return output_url
@@ -157,6 +206,11 @@ def write_image_to_s3(output_image_path, s3_output_bucket_name, output_image_nam
         if error_code == '404':
             exists = False
     s3_client = boto3.client('s3')
+
+    print("-----start uploading file-----")
+    print("Output Image Path: "+output_image_path)
+    print("s3 output bucket name: " + s3_output_bucket_name)
+    print("Output Image Name: "+output_image_name)
     reponse = s3_client.upload_file(output_image_path, s3_output_bucket_name, output_image_name)
 	# Return a URL to the object
     output_url = "https://" + s3_output_bucket_name + ".s3.amazonaws.com/"+output_image_name
