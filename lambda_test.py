@@ -97,8 +97,7 @@ def lambda_handler(event, context):
             # Delete message from the queue           
             sqs_client.delete_message(QueueUrl=input_queue_url, ReceiptHandle=receipt_handle)
         
-            break
-        break
+          
 
 ##############################################################################
 # Process a newline-delimited list of URls
