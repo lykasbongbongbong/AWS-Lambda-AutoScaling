@@ -1,4 +1,4 @@
-
+# tested under py37 function
 import json
 import time
 import sys
@@ -8,14 +8,7 @@ import logging
 import uuid
 import math
 import boto3
-# from urllib.request import Request, urlopen
-
 import urllib.request
-
-# import httplib
-# from boto.sqs.message import RawMessage
-# from boto.sqs.message import Message
-# from boto.s3.key import Key
 import botocore
 
 ##########################################################
@@ -55,15 +48,15 @@ def lambda_handler(event, context):
 	# Get S3 bucket, create if none supplied
     s3_output_bucket_name = event['s3_output_bucket']
     if s3_output_bucket_name == "":
-        s3_output_bucket_name = "nthu-109065517-2"
-        s3_client.create_bucket(Bucket=s3_output_bucket_name, ACL='public-read-write')
-        # bucket = s3.Bucket("nthu-109065517-2")
-        # bucket.Acl().put(ACL='public-read-write')
-        
-
+        s3_output_bucket_name = "hw3-output-bucket"
+        s3_client.create_bucket(Bucket=s3_output_bucket_name)
+        s3_client.put_bucket_policy(
+            Bucket=s3_output_bucket_name,
+            Policy='{"Version": "2012-10-17","Statement": [{"Sid": "PublicReadForGetBucketObjects","Effect": "Allow","Principal": "*","Action": "s3:GetObject","Resource": "arn:aws:s3:::hw3-output-bucket/*"}]}',
+        )
+    
     print('Retrieving jobs from queue %s. Processed images will be stored in %s and a message placed in queue %s' % (input_queue_name, s3_output_bucket_name, output_queue_name))
 
-    
     #connect to sqs and open queue
     input_queue_url_response = sqs_client.get_queue_url(QueueName=input_queue_name)
     output_queue_url_response = sqs_client.get_queue_url(QueueName=output_queue_name)
@@ -72,35 +65,25 @@ def lambda_handler(event, context):
 
     print("Input queue url: " + input_queue_url)
     print("Output queue url: "+ output_queue_url)
-
     print("Polling input queue...")
-    
     
     while True:
         # Get the queue
         queue = sqs.get_queue_by_name(QueueName=input_queue_name)
         for msg in queue.receive_messages():
             print("Message received...")
-            # print(msg)
             message = msg.body 
             # print()
             # print(message)
             # print()
             receipt_handle = msg.receipt_handle
-            # print()
-            # print("Receipt Handle")
-            # print(receipt_handle)
-
 
             #Create a unique job id
             job_id = str(uuid.uuid4())
 
             # Process the image, creating the image montage
             output_url = process_message(message, s3_output_bucket_name, job_id)  
-            # # output_url = "https://google.com.tw/"
             print(output_url)  
-
-           
 
             # time.sleep(15) 
             output_message = "Output available at: %s" % (output_url) 
@@ -126,14 +109,7 @@ def process_message(message, s3_output_bucket_name, job_id):
     output_image_name = "output-%s.png" % (job_id)
     # output_image_path = output_dir + output_image_name 
     output_image_path = "/tmp/" + job_id + "/" + output_image_name
-    
-    # print("Downloading image from" + message)
 
-   
-    #cd to /tmp
-    # cd_cmd = "cd /tmp"
-    # print(cd_cmd)
-    # os.system(cd_cmd)
     os.chdir("/tmp")
 
     #create job_id folder
@@ -146,33 +122,13 @@ def process_message(message, s3_output_bucket_name, job_id):
     os.chdir(job_id_folder)
     # cd_to_job_id_folder_cmd = "cd /tmp/"+job_id
     print("Change Folder to " + job_id_folder)
-    # os.system(cd_to_job_id_folder_cmd)
 
-    #download images
-    # download_cmd = "wget -O "+message
-    # print(download_cmd)
-    # os.system(download_cmd)
-    # Download images from URLs specified in message
-
-    # urllib.request.urlretrieve("http://www.digimouth.com/news/media/2011/09/google-logo.jpg", "local-filename.jpg")
     for line in message.splitlines():
         img_name = line.split('/')[-1]
-        # print("Downloading image from %s" % line)
-        # image = urllib.urlopen()
         urllib.request.urlretrieve(line, img_name)
-        # # download_cmd = "wget -P %s %s" % (output_dir, line)
-        # req = Request(line, headers={'User-Agent': 'Mozilla/5.0'})
-        # image = urlopen(req).read()        
-        # download_cmd = "wget %s" % (line)
-        # # download_cmd = "curl "+line+" > "+img_name
-        # os.system(download_cmd)
-        # print(download_cmd)
 
     # # Invoke ImageMagick to create a montage
     print("-----Doing montage-----")
-    cd_to_tmp = "cd /tmp"
-    print(cd_to_tmp)
-    os.system(cd_to_tmp)
     tmp_img_path = output_dir + "/" + "20120728-DSC01292-L.jpg"
     montage_cmd = "montage -size 400x400 null: " + output_dir + "/* null: -thumbnail 400x400 -bordercolor white -background black +polaroid -resize 80% -gravity center -background black -geometry -10+2  -tile x1 " + output_image_path
 
@@ -187,7 +143,6 @@ def process_message(message, s3_output_bucket_name, job_id):
     output_url = write_image_to_s3(output_image_path, s3_output_bucket_name, output_image_name)
     print(output_url)
     return output_url
-
 
 ##############################################################################
 # Write an image to S3
@@ -215,7 +170,6 @@ def write_image_to_s3(output_image_path, s3_output_bucket_name, output_image_nam
 	# Return a URL to the object
     output_url = "https://" + s3_output_bucket_name + ".s3.amazonaws.com/"+output_image_name
     return output_url 
-
 
 ##############################################################################
 # Write the result of a job to the output queue: OK
